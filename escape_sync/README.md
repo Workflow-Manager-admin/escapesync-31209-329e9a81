@@ -27,6 +27,33 @@ Launches the test runner in interactive watch mode.
 Builds the app for production to the `build` folder.\
 It correctly bundles React in production mode and optimizes the build for the best performance.
 
+---
+
+## 🔗 Firebase Integration (Real-Time Chat Demo)
+
+This project includes a sample integration with [Firebase](https://firebase.google.com/):
+- **Config and initialization**: See [`src/firebase.js`](src/firebase.js)
+- **Real-time chat**: Demo chat uses Firestore database for instant message updates across clients.
+
+### How to set up your Firebase config
+
+1. **Create a Firebase project** at [console.firebase.google.com](https://console.firebase.google.com/).
+2. **Register a Web App** in your Firebase Project settings.
+3. **Copy the config object** (from the Firebase SDK snippet in your console).
+4. **Replace the `FIREBASE_CONFIG`** in [`src/firebase.js`](src/firebase.js) with your credentials.
+    - For security, store keys in a `.env.local` file and reference via `process.env`, or use deployment secrets.
+    - **DO NOT COMMIT PRIVATE/PRODUCTION KEYS TO PUBLIC REPOS.**
+5. **Add a Firestore database** (test mode is OK for demos) and create a collection `chat`.
+6. The EscapeSync container will auto-sync chat in real-time between browser tabs/users if Firebase is configured.
+
+**For production:**
+- Lock down your Firestore rules to prevent unauthorized writes/reads.
+- Use authentication if handling user data.
+
+See extensive code comments in [`src/firebase.js`](src/firebase.js).
+
+---
+
 ## Customization
 
 ### Colors
