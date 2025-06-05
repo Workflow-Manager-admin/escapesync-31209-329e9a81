@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-
+// ---- ADD Firebase chat integration ----
+import { subscribeToChat, sendChatMessage } from './firebase'; // see comments below!
 // PUBLIC_INTERFACE
 /**
  * Main container for EscapeSync collaborative escape room experience.
@@ -12,6 +13,9 @@ function EscapeSyncContainer() {
     { id: 2, name: 'Sam', avatar: '🧑‍🎤', progress: 80 },
     { id: 3, name: 'Jordan', avatar: '🧑‍💻', progress: 55 }
   ]);
+  // ---- Use Firebase: chat messages
+  // On first load, fall back to default messages shown below, but when Firebase is initialized,
+  // real-time updates are received via subscribeToChat:
   const [messages, setMessages] = useState([
     { player: 1, text: 'Did anyone solve puzzle 2 yet?', time: '00:10' },
     { player: 2, text: 'I found a hint in the bookshelf!', time: '00:12' }
@@ -30,6 +34,32 @@ function EscapeSyncContainer() {
     userInput: ''
   });
 
+  // ----------------------------------------
+  // FIREBASE: Realtime chat subscription effect
+  // ----------------------------------------
+  // See firebase.js for configuration and how to set up your project.
+  // On mount, subscribe to "chat" updates in Firestore.
+  //
+  // To use this demo:
+  // 1. Make sure your Firebase config is set in src/firebase.js and "chat" collection exists in Firestore.
+  // 2. In production, protect your database with auth/rules to avoid spam.
+  useEffect(() => {
+    // Subscribe to chat if Firebase is available; catch errors if not configured.
+    let unsubscribe;
+    try {
+      unsubscribe = subscribeToChat((msgs) => {
+        // Defensive: if messages are empty, keep default chat history
+        if (msgs && msgs.length > 0) setMessages(msgs);
+      });
+    } catch (error) {
+      // Firebase not initialized / not configured: safe to ignore for local/demo only.
+      // (Demo will still show preset messages.)
+      // console.warn('Firebase chat not active (see firebase.js):', error);
+    }
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, []);
+  // ----------------------------------------
+
   // Countdown timer effect
   useEffect(() => {
     timerInterval.current = setInterval(() => {
@@ -47,17 +77,26 @@ function EscapeSyncContainer() {
 
   // Handle new chat message
   // PUBLIC_INTERFACE
-  const handleSendMessage = (e) => {
+  // Updated: Send to Firebase if configured, else update local state for demo.
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (chatInput.trim() === '') return;
-    setMessages([
-      ...messages,
-      {
-        player: 1, // Assume self (demo); would use real player id
-        text: chatInput,
-        time: formatTime(TOTAL_TIME - timeLeft)
-      }
-    ]);
+    const msg = {
+      player: 1, // TODO: replace with real authenticated player ID
+      text: chatInput,
+      time: formatTime(TOTAL_TIME - timeLeft)
+    };
+    // Try to send to Firebase (as Firestore chat demo)
+    try {
+      await sendChatMessage(msg);
+    } catch (error) {
+      // If Firebase is unavailable, just do local for demo
+      setMessages([
+        ...messages,
+        msg
+      ]);
+      // Optional: notify user it's only local (not real-time).
+    }
     setChatInput('');
   };
 
@@ -424,3 +463,19 @@ function EscapeSyncContainer() {
 }
 
 export default EscapeSyncContainer;
+
+/*
+-----------------------------------------------
+ESCAPESYNC FIREBASE INTEGRATION NOTES
+-----------------------------------------------
+
+To fully integrate Firebase for real-time chat, follow these steps:
+1. Edit src/firebase.js and configure FIREBASE_CONFIG with your project's credentials.
+2. In the Firebase Console, create a Firestore database (in test mode for demos, or with locked-down rules in prod).
+3. Create a 'chat' collection in Firestore. The chat UI here will sync across users in real time!
+4. For other resources (puzzles, users), add collections and use Firestore's (or Realtime DB's) API in similar fashion.
+5. Don't commit real API keys to public repos, use environment variables for config.
+
+For more info: https://firebase.google.com/docs/web/setup
+
+*/
